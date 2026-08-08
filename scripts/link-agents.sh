@@ -1,35 +1,41 @@
 #!/usr/bin/env bash
 # Discover skills under collection SSOT and symlink into each assistant.
 # - Thin:     <name>/SKILL.md
-# - Monorepo: <repo>/skills/<name>/SKILL.md
+# - Monorepo: <repo>/skills/<name>/SKILL.md  → link name <name>
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export PATH="/opt/homebrew/bin:/usr/bin:/bin:${PATH:-}"
 
-entries=()
+# Build name -> path lines; monorepo nested wins over top-level for same name if we process nested first...
+# Prefer: if both top-level SKILL and nested, nested is the agent skill for monorepos that also might have root docs.
+# Order: first nested skills/*, then top-level SKILL.md only if name not already taken.
+
+tmp=$(mktemp)
+trap 'rm -f "$tmp"' EXIT
+
+# Nested monorepo skills first
 while IFS= read -r -d '' dir; do
   name=$(basename "$dir")
   case "$name" in .git|scripts) continue ;; esac
-  if [[ -f "$dir/SKILL.md" ]]; then
-    entries+=("${name}|${dir}")
-  fi
   if [[ -d "$dir/skills" ]]; then
     while IFS= read -r -d '' sdir; do
       sname=$(basename "$sdir")
       [[ -f "$sdir/SKILL.md" ]] || continue
-      entries+=("${sname}|${sdir}")
+      echo "${sname}|${sdir}" >> "$tmp"
     done < <(find "$dir/skills" -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null)
   fi
 done < <(find "$ROOT" -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null)
 
-declare -A seen=()
-pairs=()
-for e in "${entries[@]}"; do
-  n="${e%%|*}"
-  [[ -n "${seen[$n]:-}" ]] && continue
-  seen[$n]=1
-  pairs+=("$e")
-done
+# Thin top-level (skip if name already listed)
+while IFS= read -r -d '' dir; do
+  name=$(basename "$dir")
+  case "$name" in .git|scripts) continue ;; esac
+  [[ -f "$dir/SKILL.md" ]] || continue
+  if grep -q "^${name}|" "$tmp" 2>/dev/null; then
+    continue
+  fi
+  echo "${name}|${dir}" >> "$tmp"
+done < <(find "$ROOT" -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null)
 
 link_one() {
   local target_dir="$1" name="$2" src="$3"
@@ -56,20 +62,21 @@ targets=(
   "${HOME}/.cc-switch/skills"
 )
 
-for t in "${targets[@]}"; do
-  case "$t" in
-    "${HOME}/.grok/skills"|"${HOME}/.codex/skills"|"${HOME}/.hermes/skills"|"${HOME}/.claude/skills"|"${HOME}/.cursor/skills")
-      mkdir -p "$t" ;;
-    *)
-      [[ -d "$(dirname "$t")" ]] || continue
-      mkdir -p "$t" ;;
-  esac
-  for e in "${pairs[@]}"; do
-    link_one "$t" "${e%%|*}" "${e#*|}"
+while IFS='|' read -r name src; do
+  [[ -n "$name" ]] || continue
+  for t in "${targets[@]}"; do
+    case "$t" in
+      "${HOME}/.grok/skills"|"${HOME}/.codex/skills"|"${HOME}/.hermes/skills"|"${HOME}/.claude/skills"|"${HOME}/.cursor/skills")
+        mkdir -p "$t" ;;
+      *)
+        [[ -d "$(dirname "$t")" ]] || continue
+        mkdir -p "$t" ;;
+    esac
+    link_one "$t" "$name" "$src"
   done
-done
+done < "$tmp"
 
 echo "Done. SSOT=$ROOT"
-echo -n "skills: "
-for e in "${pairs[@]}"; do echo -n "${e%%|*} "; done
+echo "skills:"
+cut -d'|' -f1 "$tmp" | tr '\n' ' '
 echo
