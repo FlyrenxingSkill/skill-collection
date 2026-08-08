@@ -1,51 +1,84 @@
 # skill-collection
 
-聚合仓 **只引用** 组织 [FlyrenxingSkill](https://github.com/FlyrenxingSkill) 下的仓库（git submodule）。  
-父仓本身几乎只有：`README` / `AGENTS.md` / `scripts/` / `.gitmodules`。
+聚合仓 **只引用** [FlyrenxingSkill](https://github.com/FlyrenxingSkill) 下各仓库（git submodule）。  
+父仓几乎只有：`README` / `AGENTS.md` / `scripts/` / `.gitmodules` + 各子模块指针。
 
-本机：`~/.agents/skills`
+本机真源：**`~/.agents/skills`**
 
-## 为什么本地会看到二进制？
+运维给 Agent 的入口 skill：**[skill-hub](https://github.com/FlyrenxingSkill/skill-hub)**（本仓 submodule `skill-hub/`）。  
+日常对话提「同步 skill / 新建 skill / 新助手」时应加载 skill-hub。
 
-`wechat-export/bin/*`（约 17MB）来自子模块 **wechat-export 仓库自己的内容**，不是聚合仓「又拷了一份」。
+---
 
-- 聚合仓 git 历史里只有 submodule 的 **commit 指针**
-- `git submodule update` 时按指针去 clone/checkout 子仓，子仓里有 bin 就会出现在工作树
-- 不需要该 skill：`git submodule deinit -f wechat-export`
+## 新机器 / 新助手：安装检查清单
 
-## 布局：扁平，没有 projects/
+按顺序执行（读完应能独立装好）：
 
-每个子模块路径 = 仓库名，直接引用对应 skill/工程仓：
+```bash
+# 1) 克隆聚合仓（含所有 skill 子模块）
+git clone --recurse-submodules \
+  https://github.com/FlyrenxingSkill/skill-collection.git \
+  ~/.agents/skills
 
-| 路径 | 仓库 | Agent 入口 |
-|------|------|------------|
-| `hass-cli` | FlyrenxingSkill/hass-cli | `hass-cli/SKILL.md` |
-| `apple-music-dl` | …/apple-music-dl | 根 SKILL.md |
-| `reminders` | …/reminders | 根 SKILL.md |
-| `wechat-export` | …/wechat-export | 根 SKILL.md（bin 在子仓内） |
-| `tgctl` | …/tgctl | **整仓** · `tgctl/skills/tgctl/SKILL.md` |
-| `wechat-memory` | …/wechat-memory | **整仓** · `wechat-memory/skills/wechat-rag/SKILL.md` |
+# 2) pull 时自动更新子模块 + 软链（推荐）
+bash ~/.agents/skills/scripts/install-git-hooks.sh
 
-`link-agents.sh` 自动发现：
+# 3) 立刻链到当前机器上的各助手目录
+bash ~/.agents/skills/scripts/link-agents.sh
+# 或一条龙：
+# bash ~/.agents/skills/scripts/sync.sh
+```
 
-1. 顶层 `*/SKILL.md`
-2. monorepo `*/skills/*/SKILL.md`  
-并软链到各助手（如 `wechat-rag`、`tgctl`）。
+检查：
 
-因此 monorepo **就是单独一个顶层子模块**，不必再包一层 `projects/`，也不必在聚合仓里再做别名软链。
+```bash
+test -f ~/.agents/skills/skill-hub/SKILL.md && echo "skill-hub OK"
+test -f ~/.grok/skills/skill-hub/SKILL.md && echo "grok linked OK"   # 若使用 Grok
+git -C ~/.agents/skills submodule status
+```
 
-## 同步
+私有子模块（`wechat-export`）需要 GitHub 登录且对 org 有读权限。
+
+### 以后日常
 
 ```bash
 ~/.agents/skills/scripts/sync.sh
-# 首次 clone 后：
-# scripts/install-git-hooks.sh
 ```
 
-## 新增
+---
 
-```bash
-git submodule add https://github.com/FlyrenxingSkill/<name>.git <name>
-git commit -m "Add <name>" && git push
-./scripts/sync.sh
-```
+## 为什么本地会看到二进制？
+
+`wechat-export/bin/*` 属于子模块 **wechat-export 仓库**，不是聚合仓再拷一份。  
+不需要：`git submodule deinit -f wechat-export`。
+
+## 布局（扁平）
+
+| 路径 | 说明 |
+|------|------|
+| `skill-hub` | 本聚合仓的运维 skill |
+| `hass-cli` / `reminders` / `apple-music-dl` / `wechat-export` | 薄 skill（根目录 `SKILL.md`） |
+| `tgctl` | 完整工程；入口 `tgctl/skills/tgctl/` |
+| `wechat-memory` | 完整工程；入口 `wechat-memory/skills/wechat-rag/` |
+
+`link-agents.sh` 发现顶层 `*/SKILL.md` 与 monorepo `*/skills/*/SKILL.md`，并软链到 Grok / Codex / Hermes / Claude / Cursor 等。
+
+## 新增 skill
+
+见 **skill-hub**（`skill-hub/SKILL.md`），摘要：
+
+1. `gh repo create FlyrenxingSkill/<name> …` + 推送 `SKILL.md`  
+2. `git submodule add … <name>` → push 聚合仓  
+3. `scripts/sync.sh`  
+
+## 脚本
+
+| 脚本 | 作用 |
+|------|------|
+| `scripts/sync.sh` | pull + submodule `--remote` + link |
+| `scripts/link-agents.sh` | 仅软链（含新建 skill 名） |
+| `scripts/install-git-hooks.sh` | `git pull` 后自动 submodule + link |
+
+## Agent 约定
+
+提到任意 skill 或本聚合仓时：优先 `bash ~/.agents/skills/scripts/sync.sh`，再读对应 `SKILL.md`；管仓操作用 **skill-hub**。

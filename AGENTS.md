@@ -1,14 +1,9 @@
 # Agent instructions — skill-collection
 
-SSOT: `~/.agents/skills` — **submodule pointers only**.
+SSOT: `~/.agents/skills`
 
-```bash
-bash "$HOME/.agents/skills/scripts/sync.sh"
-```
+1. Sync: `bash "$HOME/.agents/skills/scripts/sync.sh"`
+2. Managing the hub (add skill, new assistant, diagnose): read **`skill-hub/SKILL.md`**
+3. Bootstrap / human install steps: root **README.md**
 
-Then use skill via assistant path or:
-
-- Thin: `~/.agents/skills/<name>/SKILL.md`
-- Monorepo: `~/.agents/skills/<repo>/skills/<name>/SKILL.md`
-
-Bins under `wechat-export/bin` belong to the wechat-export submodule repo.
+Submodules only — do not vendor skill bodies into the parent repo.

@@ -16,3 +16,6 @@
 [submodule "tgctl"]
 	path = tgctl
 	url = https://github.com/FlyrenxingSkill/tgctl.git
+[submodule "skill-hub"]
+	path = skill-hub
+	url = https://github.com/FlyrenxingSkill/skill-hub.git
