@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# One-time / when collection gains new skill names: link into assistant skill dirs.
-# Daily updates: only `git pull` + `git submodule update` in ~/.agents/skills.
+# Symlink every skill entry (dirs or aliases with SKILL.md) into assistant skill roots.
+# Safe to run repeatedly. Called by sync.sh and git hooks after pull.
 set -euo pipefail
-ROOT="${HOME}/.agents/skills"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 if [[ ! -d "$ROOT" ]]; then
-  echo "Missing $ROOT — clone skill-collection first" >&2
+  echo "Missing $ROOT" >&2
   exit 1
 fi
 
@@ -13,44 +13,66 @@ link_skill() {
   mkdir -p "$target_dir"
   local dest="${target_dir}/${name}"
   local src="${ROOT}/${name}"
-  [[ -e "$src" || -L "$src" ]] || { echo "skip missing: $name"; return 0; }
-  # Always (re)point symlink to canonical path
+  # Resolve to real path for stability across relative monorepo aliases
+  if [[ ! -e "$src" && ! -L "$src" ]]; then
+    echo "skip missing: $name"
+    return 0
+  fi
+  # Never clobber a real directory (e.g. Grok built-ins, codex .system sibling dirs)
   if [[ -e "$dest" && ! -L "$dest" ]]; then
-    echo "exists (not symlink), skip: $dest" >&2
+    echo "skip non-symlink: $dest" >&2
     return 0
   fi
   ln -sfn "$src" "$dest"
   echo "link $dest -> $src"
 }
 
+# Top-level entries that expose SKILL.md (including symlinks into monorepos)
 skills=()
-while IFS= read -r d; do
-  name=$(basename "$d")
-  case "$name" in .git|scripts|.*) continue ;; esac
-  # dir or symlink to dir with SKILL.md
-  if [[ -f "$d/SKILL.md" ]] || [[ -L "$d" && -f "$d/SKILL.md" ]]; then
+while IFS= read -r -d '' path; do
+  name=$(basename "$path")
+  case "$name" in
+    .git|scripts|projects|repos|.*) continue ;;
+  esac
+  if [[ -f "$path/SKILL.md" ]]; then
     skills+=("$name")
   fi
-done < <(find "$ROOT" -mindepth 1 -maxdepth 1 \( -type d -o -type l \))
+done < <(find "$ROOT" -mindepth 1 -maxdepth 1 \( -type d -o -type l \) -print0 2>/dev/null)
+
+if [[ ${#skills[@]} -eq 0 ]]; then
+  echo "No skills found under $ROOT" >&2
+  exit 0
+fi
 
 targets=(
   "${HOME}/.grok/skills"
   "${HOME}/.hermes/skills"
   "${HOME}/.codex/skills"
   "${HOME}/.claude/skills"
+  "${HOME}/.cursor/skills"
   "${HOME}/.buzz/.agents/skills"
   "${HOME}/.buzz/.claude/skills"
   "${HOME}/.buzz/.codex/skills"
   "${HOME}/.buzz/.goose/skills"
+  "${HOME}/.cc-switch/skills"
 )
 
 for t in "${targets[@]}"; do
   parent=$(dirname "$t")
-  [[ -d "$parent" ]] || continue
+  # create target if parent exists OR it's a known home agent path we want to create
+  case "$t" in
+    "${HOME}/.grok/skills"|"${HOME}/.codex/skills"|"${HOME}/.hermes/skills"|"${HOME}/.claude/skills")
+      mkdir -p "$t"
+      ;;
+    *)
+      [[ -d "$parent" ]] || continue
+      mkdir -p "$t"
+      ;;
+  esac
   for name in "${skills[@]}"; do
     link_skill "$t" "$name"
   done
 done
 
-echo "Done. SSOT=$ROOT  skills=${skills[*]}"
-echo "Note: after git pull you do NOT need this script unless names were added."
+echo "Done. SSOT=$ROOT"
+echo "skills: ${skills[*]}"
