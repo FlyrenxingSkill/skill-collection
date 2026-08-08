@@ -13,6 +13,6 @@
 [submodule "wechat-memory"]
 	path = wechat-memory
 	url = https://github.com/FlyrenxingSkill/wechat-memory.git
-[submodule "projects/tgctl"]
-	path = projects/tgctl
+[submodule "tgctl"]
+	path = tgctl
 	url = https://github.com/FlyrenxingSkill/tgctl.git
