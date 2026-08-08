@@ -19,3 +19,6 @@
 [submodule "skill-hub"]
 	path = skill-hub
 	url = https://github.com/FlyrenxingSkill/skill-hub.git
+[submodule "apple-health-coach"]
+	path = apple-health-coach
+	url = https://github.com/FlyrenxingSkill/apple-health-coach.git
