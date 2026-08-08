@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Link other assistants' user-skill paths to ~/.agents/skills entries.
+# One-time / when collection gains new skill names: link into assistant skill dirs.
+# Daily updates: only `git pull` + `git submodule update` in ~/.agents/skills.
 set -euo pipefail
 ROOT="${HOME}/.agents/skills"
 if [[ ! -d "$ROOT" ]]; then
@@ -12,54 +13,44 @@ link_skill() {
   mkdir -p "$target_dir"
   local dest="${target_dir}/${name}"
   local src="${ROOT}/${name}"
-  [[ -d "$src" ]] || { echo "skip missing skill: $name"; return 0; }
-  if [[ -L "$dest" ]]; then
-    ln -sfn "$src" "$dest"
-    echo "relink $dest -> $src"
-  elif [[ -e "$dest" ]]; then
+  [[ -e "$src" || -L "$src" ]] || { echo "skip missing: $name"; return 0; }
+  # Always (re)point symlink to canonical path
+  if [[ -e "$dest" && ! -L "$dest" ]]; then
     echo "exists (not symlink), skip: $dest" >&2
-  else
-    ln -sfn "$src" "$dest"
-    echo "link $dest -> $src"
+    return 0
   fi
+  ln -sfn "$src" "$dest"
+  echo "link $dest -> $src"
 }
 
-# Discover skill dirs (submodules / dirs with SKILL.md)
 skills=()
 while IFS= read -r d; do
   name=$(basename "$d")
-  [[ "$name" == .* || "$name" == scripts ]] && continue
-  [[ -f "$d/SKILL.md" ]] && skills+=("$name")
-done < <(find "$ROOT" -mindepth 1 -maxdepth 1 -type d)
+  case "$name" in .git|scripts|.*) continue ;; esac
+  # dir or symlink to dir with SKILL.md
+  if [[ -f "$d/SKILL.md" ]] || [[ -L "$d" && -f "$d/SKILL.md" ]]; then
+    skills+=("$name")
+  fi
+done < <(find "$ROOT" -mindepth 1 -maxdepth 1 \( -type d -o -type l \))
 
-# Grok user skills (keep non-collection skills intact)
-for name in "${skills[@]}"; do
-  link_skill "${HOME}/.grok/skills" "$name"
-done
+targets=(
+  "${HOME}/.grok/skills"
+  "${HOME}/.hermes/skills"
+  "${HOME}/.codex/skills"
+  "${HOME}/.claude/skills"
+  "${HOME}/.buzz/.agents/skills"
+  "${HOME}/.buzz/.claude/skills"
+  "${HOME}/.buzz/.codex/skills"
+  "${HOME}/.buzz/.goose/skills"
+)
 
-# Hermes
-for name in "${skills[@]}"; do
-  link_skill "${HOME}/.hermes/skills" "$name"
-done
-
-# Codex user skills (preserve .system)
-for name in "${skills[@]}"; do
-  link_skill "${HOME}/.codex/skills" "$name"
-done
-
-# Claude Code style
-if [[ -d "${HOME}/.claude" ]]; then
+for t in "${targets[@]}"; do
+  parent=$(dirname "$t")
+  [[ -d "$parent" ]] || continue
   for name in "${skills[@]}"; do
-    link_skill "${HOME}/.claude/skills" "$name"
-  done
-fi
-
-# Buzz nested agents (if present)
-for base in "${HOME}/.buzz/.agents/skills" "${HOME}/.buzz/.claude/skills" "${HOME}/.buzz/.codex/skills" "${HOME}/.buzz/.goose/skills"; do
-  [[ -d "$(dirname "$base")" ]] || continue
-  for name in "${skills[@]}"; do
-    link_skill "$base" "$name"
+    link_skill "$t" "$name"
   done
 done
 
-echo "Done. Canonical skills: $ROOT"
+echo "Done. SSOT=$ROOT  skills=${skills[*]}"
+echo "Note: after git pull you do NOT need this script unless names were added."

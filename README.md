@@ -1,76 +1,93 @@
 # skill-collection
 
-Flyrenxing 的 **Agent Skill 引用仓 / 集合仓**。
+Flyrenxing 的 **Agent Skill 引用仓**。
 
 - 组织：[FlyrenxingSkill](https://github.com/FlyrenxingSkill)
-- 每个独立 skill 是组织下的单独仓库；本仓用 **git submodule** 引用它们。
-- 本机约定：clone 到 **`~/.agents/skills`**，其它助手目录软链到此处。
+- 本机唯一真源：`~/.agents/skills`（clone 本仓，含 submodule）
+- **不要**把 Grok/Codex 自带 skill 拷进本仓
 
-## 给 Agent 的硬性约定（请遵守）
+## 两类条目
 
-**只要用户提到了某个 skill（名称、用途、或「用 xxx skill」），先尝试从本集合更新，再执行：**
+| 类型 | 例子 | 形态 |
+|------|------|------|
+| **薄 skill 包** | `hass-cli`, `reminders` | 根目录即 `SKILL.md` 的独立仓 |
+| **完整工程 + 入口别名** | `wechat-memory` + `wechat-rag` | submodule 是**整仓**；`wechat-rag` 是指向 `wechat-memory/skills/wechat-rag` 的 **git 符号链接**（给 Agent 扁平发现用） |
+
+## Agent 约定：提到 skill 就 pull
 
 ```bash
-# 在 ~/.agents/skills（本仓）内
+cd ~/.agents/skills
 git pull --rebase --autostash
 git submodule update --init --recursive --remote
-# 若只更新某一个 skill：
-# git submodule update --init --remote <skill-name>
 ```
 
-若 pull/submodule 失败：说明权限或网络问题，告知用户；**不要假装 skill 已是最新**。
+然后读 `~/.agents/skills/<name>/SKILL.md`。
 
-私有 skill（如 `wechat-export`）需要本机 `gh auth` / SSH 对 org 有读权限。
+### pull 之后要不要重新软链？
 
-## 目录结构
+**一般不要。** submodule 在原地更新，已有路径与符号链接仍有效。
 
-每个 submodule 目录名 = skill 名，内含 `SKILL.md`（Agent 发现入口）。
+只有这些情况才跑 `scripts/link-agents.sh`：
 
-| Skill | 仓库 | 可见性 | 说明 |
-|-------|------|--------|------|
-| `hass-cli` | [FlyrenxingSkill/hass-cli](https://github.com/FlyrenxingSkill/hass-cli) | public | Home Assistant via hass-cli |
-| `apple-music-dl` | [FlyrenxingSkill/apple-music-dl](https://github.com/FlyrenxingSkill/apple-music-dl) | public | Apple Music 下载 |
-| `tgctl` | [FlyrenxingSkill/tgctl](https://github.com/FlyrenxingSkill/tgctl) | public | Telegram 账号整理 |
-| `wechat-rag` | [FlyrenxingSkill/wechat-rag](https://github.com/FlyrenxingSkill/wechat-rag) | public | 微信记忆库 RAG |
-| `wechat-export` | [FlyrenxingSkill/wechat-export](https://github.com/FlyrenxingSkill/wechat-export) | **private** | 本机微信导出 |
-| `reminders` | [FlyrenxingSkill/reminders](https://github.com/FlyrenxingSkill/reminders) | public | macOS 提醒事项 CLI |
+- 第一次安装
+- 集合里**新增**了 skill / monorepo 别名
+- 换了新助手目录
 
-## 本机安装
+## 多助手如何挂接（避免「逐个软链」误解）
+
+目标：助手只**看见** skill，不复制内容。
+
+推荐（SSOT 仍是本仓）：
+
+1. 本仓：`~/.agents/skills` = 本 git
+2. 各助手：对**每个**本仓里带 `SKILL.md` 的路径做软链（脚本一次搞定）
+3. Grok 自带 skill（`help` / `check-work` 等）留在 `~/.grok/skills/` 真目录，**不要**整目录替换成指向本仓（会冲掉自带 skill）
+
+### 和 CC Switch 的关系
+
+[CC Switch](https://github.com/farion1231/cc-switch) 的 skill SSOT 默认是 `~/.cc-switch/skills/`，再软链到各 CLI。
+
+- **能解决**：多 CLI 一键装 skill、统一开关、GUI 管理
+- **不能替代**：本仓的 **git submodule 版本真相**；`git pull` 工作流仍要有一处真源
+- **若用 CC Switch**：二选一，避免双真源  
+  - A）以本仓为真源：把 CC Switch 的 skills 目录指到 / 同步自 `~/.agents/skills`（或只让它管理「非本集合」的第三方 skill）  
+  - B）以 CC Switch 为真源：放弃本仓 submodule 模型（不推荐，丢 monorepo 引用能力）
+
+结论：**工程/monorepo 引用继续用 skill-collection；多助手 GUI 同步可选用 CC Switch，但 SSOT 只留一处。**
+
+## 当前清单
+
+| 路径 | 仓库 | 说明 |
+|------|------|------|
+| `hass-cli` | [FlyrenxingSkill/hass-cli](https://github.com/FlyrenxingSkill/hass-cli) | 薄 skill |
+| `apple-music-dl` | [FlyrenxingSkill/apple-music-dl](https://github.com/FlyrenxingSkill/apple-music-dl) | 薄 skill |
+| `tgctl` | [FlyrenxingSkill/tgctl](https://github.com/FlyrenxingSkill/tgctl) | 薄 skill（完整 CLI 仍可另仓，见下） |
+| `reminders` | [FlyrenxingSkill/reminders](https://github.com/FlyrenxingSkill/reminders) | 薄 skill |
+| `wechat-export` | [FlyrenxingSkill/wechat-export](https://github.com/FlyrenxingSkill/wechat-export) | private 薄/工具 skill |
+| `wechat-memory` | [FlyrenxingSkill/wechat-memory](https://github.com/FlyrenxingSkill/wechat-memory) | **完整工程** |
+| `wechat-rag` | → `wechat-memory/skills/wechat-rag` | 别名，非独立内容 |
+
+已废弃独立切片仓：`FlyrenxingSkill/wechat-rag`（内容已并入 monorepo；将 archive）。
+
+## 安装
 
 ```bash
-# 首次（含私有仓需已登录 gh / SSH）
 git clone --recurse-submodules https://github.com/FlyrenxingSkill/skill-collection.git ~/.agents/skills
-
-# 或已有空目录
-cd ~/.agents/skills
-git pull
-git submodule update --init --recursive
+~/.agents/skills/scripts/link-agents.sh   # 仅首次 / 新增 skill 后
 ```
 
-### 其它助手目录 → 软链到本仓
+## 新增 monorepo 型 skill
 
-各工具对「用户 skills」路径不同；**内容只维护这一份 git**。
-
-```bash
-# 示例：Grok 用户 skills 里为每个 skill 建软链（保留 Grok 自带 skill）
-# ln -sfn ~/.agents/skills/hass-cli ~/.grok/skills/hass-cli
-```
-
-一键脚本见 [`scripts/link-agents.sh`](scripts/link-agents.sh)。
-
-## 新增 skill
-
-1. 在组织下建仓：`FlyrenxingSkill/<name>`，根目录放 `SKILL.md`
-2. 加入本集合：
+1. 完整代码放组织仓：`FlyrenxingSkill/<project>`
+2. skill 包放在仓内例如 `skills/<skill-name>/SKILL.md`
+3. 本集合：
 
 ```bash
-git submodule add https://github.com/FlyrenxingSkill/<name>.git <name>
-git commit -m "Add skill <name>"
+git submodule add https://github.com/FlyrenxingSkill/<project>.git <project>
+ln -sfn <project>/skills/<skill-name> <skill-name>
+git add <project> <skill-name> .gitmodules
+git commit -m "Add monorepo <project> + alias <skill-name>"
 git push
 ```
 
-3. 各机器：`git pull && git submodule update --init --remote`
-
-## 与旧 FlyRenxing/* 工程的关系
-
-完整 CLI/应用仍可在 `FlyRenxing/<project>`；**Agent 只读的 skill 包**以本组织仓为准。旧仓 `skills/` 目录可改为指向本组织或逐步弃用重复内容。
+4. 各机器：`git pull && git submodule update --init --recursive`；若有新别名再跑 `link-agents.sh`

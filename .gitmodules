@@ -7,12 +7,12 @@
 [submodule "tgctl"]
 	path = tgctl
 	url = https://github.com/FlyrenxingSkill/tgctl.git
-[submodule "wechat-rag"]
-	path = wechat-rag
-	url = https://github.com/FlyrenxingSkill/wechat-rag.git
 [submodule "reminders"]
 	path = reminders
 	url = https://github.com/FlyrenxingSkill/reminders.git
 [submodule "wechat-export"]
 	path = wechat-export
 	url = https://github.com/FlyrenxingSkill/wechat-export.git
+[submodule "wechat-memory"]
+	path = wechat-memory
+	url = https://github.com/FlyrenxingSkill/wechat-memory.git
