@@ -1,0 +1,18 @@
+[submodule "hass-cli"]
+	path = hass-cli
+	url = https://github.com/FlyrenxingSkill/hass-cli.git
+[submodule "apple-music-dl"]
+	path = apple-music-dl
+	url = https://github.com/FlyrenxingSkill/apple-music-dl.git
+[submodule "tgctl"]
+	path = tgctl
+	url = https://github.com/FlyrenxingSkill/tgctl.git
+[submodule "wechat-rag"]
+	path = wechat-rag
+	url = https://github.com/FlyrenxingSkill/wechat-rag.git
+[submodule "reminders"]
+	path = reminders
+	url = https://github.com/FlyrenxingSkill/reminders.git
+[submodule "wechat-export"]
+	path = wechat-export
+	url = https://github.com/FlyrenxingSkill/wechat-export.git
