@@ -22,3 +22,6 @@
 [submodule "apple-health-coach"]
 	path = apple-health-coach
 	url = https://github.com/FlyrenxingSkill/apple-health-coach.git
+[submodule "apple-calendar"]
+	path = apple-calendar
+	url = https://github.com/FlyrenxingSkill/apple-calendar.git
