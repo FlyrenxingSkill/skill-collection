@@ -25,3 +25,12 @@
 [submodule "apple-calendar"]
 	path = apple-calendar
 	url = https://github.com/FlyrenxingSkill/apple-calendar.git
+[submodule "apple-notes"]
+	path = apple-notes
+	url = https://github.com/FlyrenxingSkill/apple-notes.git
+[submodule "imessage"]
+	path = imessage
+	url = https://github.com/FlyrenxingSkill/imessage.git
+[submodule "peekaboo"]
+	path = peekaboo
+	url = https://github.com/FlyrenxingSkill/peekaboo.git
